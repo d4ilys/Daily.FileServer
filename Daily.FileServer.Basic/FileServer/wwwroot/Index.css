@@ -1,0 +1,93 @@
+﻿html, body { height: 100%; }
+
+
+#FileContent {
+    width: 550px;
+    height: 650px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #e6e6e6;
+    overflow: hidden;
+    float: left;
+}
+
+#FileContent .file {
+    width: 100%;
+    height: 50px;
+    line-height: 50px;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+    border-bottom-color: #e6e6e6;
+    font-size: 13px;
+}
+
+#FileContent .file .name {
+    width: 40%;
+    height: 100%;
+    text-indent: 10px;
+    float: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#FileContent .file .size {
+    width: 20%;
+    height: 100%;
+    text-align: center;
+    float: left;
+}
+#FileContent .file .see {
+    width: 20%;
+    height: 100%;
+    text-align: center;
+    float: left;
+}
+
+#FileContent .file .status {
+    width: 20%;
+    height: 100%;
+    text-align: center;
+    float: left;
+    color: blue;
+    color: gray;
+}
+
+#FileContent .file .status.ok { color: green; }
+
+#FileContent .file .status.error { color: red; }
+
+#FileContent .file .status.loading { color: blue; }
+
+.a-upload {
+    display: inline-block;
+    height: 38px;
+    line-height: 38px;
+    padding: 0 18px;
+    background-color: #009688;
+    color: #fff;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 14px;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.a-upload:hover { color: white; }
+
+::-webkit-scrollbar-track-piece { background-color: #f8f8f8; }
+
+::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-clip: padding-box;
+    min-height: 28px;
+}
+
+::-webkit-scrollbar-thumb:hover { background-color: #bbb; }
+
+tr.on td { background-color: #BFEFFF; }

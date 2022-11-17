@@ -1,0 +1,257 @@
+﻿@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>大文件上传</title>
+    <meta name="viewport" content="width=device-width"/>
+    <link href="~/Index.css" rel="stylesheet"/>
+    <link href="~/layui-v2.4.5/layui/css/layui.css" rel="stylesheet"/>
+    <script src="~/layui-v2.4.5/layui/layui.js"></script>
+    <script src="~/jquery-3.3.1.js"></script>
+    <script src="~/fileConfig.js"></script>
+</head>
+<body>
+
+<input type='file' name="file" id="file" multiple="multiple" style="display: none"/>
+<br/>
+&nbsp;&nbsp;<input type="button" id="onclicks" value="上传文件" class="layui-btn layui-btn-sm layui-btn-normal"/>
+<div id="FileContent" style="display: none;">
+
+</div>
+
+<script>
+    var fileList = [];
+    var fileSelectList = [];
+    layui.use(['layer'],
+        function() {
+            var $ = layui.jquery;
+            var layer = layui.layer;
+            //上传文件返回的标识
+            var fileIdList = [];
+            //文件类型
+            $(function() {
+                $("#onclicks").click(function() {
+                    uploadFile();
+                });
+                $("#file").change(function() {
+                    // clearFileInfo();
+                    // $("#FileContent").html("");
+                    let files = $(this).get(0).files;
+                    var times = [];
+                    for (var i = 0; i < files.length; i++) {
+                        if (!contains(fileSelectList, files[i])) {
+                            fileSelectList.push(files[i])
+                            var guid = fileConfig.guid();
+                            var div = "<div class='file file-" + guid + "'><span class='name'>" + files[i].name + "</span><span class='size'>" + getFileSize(files[i].size) + "</span><span class='status'>等待上传</span></div>";
+                            $("#FileContent").append(div);
+                            times.push(guid);
+                        }
+                    }
+                });
+            });
+
+            function clearFileList() {
+                $("#FileContent").children().each((index, value) => {
+                    let vob = $(value).find(".status");
+                    //获取到状态
+                    let text = vob.text();
+                    if (text != "上传成功") {
+                        $(value).remove();
+                    }
+                });
+            }
+
+            //上传文件
+            function uploadFile() {
+                let ulWindow = layer.open({
+                    type: 1,
+                    title: '上传文件',
+                    area: ['550px', '460px'],
+                    shade: 0,
+                    maxmin: true,
+                    content: $("#FileContent"),
+                    btn: ['选择文件', '上传', '清除列表', '全部关闭'], //只是为了演示
+                    btn1: function() {
+                        $("#file").click();
+                    },
+                    btn2: function() {
+                        var latermsg = layer.confirm('确定要上传吗？',
+                            {
+                                btn: ['确认', '取消'],
+                                btn1: function() {
+                                    var files = fileSelectList;
+                                    var times = [];
+                                    clearFileList();
+                                    for (var i = 0; i < files.length; i++) {
+                                        var guid = fileConfig.guid();
+                                        var time = new Date().getTime() + "-" + Math.floor(Math.random() * 10000);
+                                        var div = "<div class='file file-" + guid + "'><span class='name'>" + files[i].name + "</span><span class='size'>" + getFileSize(files[i].size) + "</span><span class='status'>正在准备</span></span><span  class='see' id='" + guid + "seeUrl'></span></div>";
+                                        $("#FileContent").append(div);
+                                        times.push(guid);
+                                    }
+                                    files_yz = files.length;
+                                    for (let i = 0; i < files.length; i++) {
+                                        setTimeout(() => {
+                                                var file = files[i];
+                                                uploadFilePromise(file, i, times).then((resolve) => {
+                                                    fileIdList.push(resolve);
+                                                });
+                                            }, 1);
+                                    }
+                                    layer.close(latermsg);
+                                },
+                                btn2: function() {
+                                }
+                            });
+
+                        return false;
+                    },
+                    btn3: function() {
+                        $("#FileContent").html("");
+                        $("#file").val("");
+                        fileSelectList = [];
+                        return false;
+                    },
+                    btn4: function() {
+                        layer.close(ulWindow);
+                    },
+                    success: function(layero, index) {
+                        // $("#file").click();
+                        //修改时回显文件附件列表
+                        if (fileList.length > 0) {
+                            $("#FileContent").html("");
+                            for (var i = 0; i < fileList.length; i++) {
+                                var guid = fileList[i].fileMd5;
+                                var url = `${fileServer}/Home/Filedownload?filemd5=${guid}`;
+                                var time = new Date().getTime() + "-" + Math.floor(Math.random() * 10000);
+                                var div = "<div class='file file-" +
+                                    guid +
+                                    "'>" +
+                                    "<span class='name'>" +
+                                    fileList[i].fileName +
+                                    "</span>" +
+                                    "<span class='size'>" +
+                                    fileList[i].fileSize +
+                                    "</span>" +
+                                    "<span class='status ok'>上传成功</span>" +
+                                    "<a target='_blank' href='" +
+                                    url +
+                                    "' class='view'>预览</a>" +
+                                    "</div>";
+                                $("#FileContent").append(div);
+                            }
+                        } else {
+                        }
+                    },
+
+                });
+            }
+             function fileSee(guid, fileId) {
+                 let url = `${fileConfig.superfileServer}/Home/FileSee?id=${fileId}`;
+                $(`#${guid}seeUrl`).html(`<a href="${url}" target="_blank">点击预览</a>`);
+            }
+            function uploadFilePromise(file, i, times) {
+                return new Promise(function(resolve, reject) {
+                        $.ajax({
+                            url: `${fileConfig.superfileServer}/Home/GetCurrChunk`,
+                            type: "POST",
+                            beforeSend: function (request) {
+                                request.setRequestHeader("Authorization", fileConfig.token);
+                            },
+                            data: {
+                                fileName: file.name,
+                                fileSize: getFileSize(file.size)
+                            },
+                            success: function (res) {
+                                if (res.code == 403) {
+                                    layer.msg(res.msg, { icon: 2 });
+                                    $("#FileContent .file-" + times[i]).find(".status").text("上传失败");
+                                    $("#FileContent .file-" + times[i]).find(".status").addClass("error");
+                                    return;
+                                }
+                                if (res.chunkIndex == -1) {
+                                    $("#FileContent .file-" + times[i]).find(".status").text("上传成功");
+                                    $("#FileContent .file-" + times[i]).find(".status").addClass("ok");
+                                    fileSee(times[i], res.id);
+                                    resolve(res.id);
+                                    return;
+                                }
+                                //  计算分段数
+                                var maxChunk = Math.ceil((file.size / fileConfig.chunkSize));
+                                $("#FileContent .file-" + times[i]).find(".status").text("0%");
+                                $("#FileContent .file-" + times[i]).find(".status").addClass("loading");
+                                //文件上传的时候也向浏览器申请线程
+                                let workerUpload = new Worker('/workUpload.js');
+                                let param = {
+                                    file: file,
+                                    chunkIndex: res.chunkIndex,
+                                    maxChunk: maxChunk,
+                                    times: times[i],
+                                    path: res.path,
+                                    token: fileConfig.token
+                                };
+                                workerUpload.postMessage(param); //向子线程发送message事件
+                                workerUpload.onmessage = ev => { //接收子线程发回来的消息,事件对象的data属性可以获取 Worker 发来的数据
+                                    let { $addClass, $text, $removeClass, $resolve, $guid } = ev.data;
+
+                                    if ($addClass != "") {
+                                        $("#FileContent .file-" + $guid).find(".status").addClass($addClass);
+                                    }
+                                    if ($removeClass != "") {
+                                        $("#FileContent .file-" + $guid).find(".status").removeClass($removeClass);
+                                    }
+                                    if ($text != "") {
+                                        $("#FileContent .file-" + $guid).find(".status").text($text);
+                                        if ($text == "上传完成") {
+                                            $("#FileContent .file-" + $guid).find(".status").text($text);
+                                            let fileName = $("#FileContent .file-" + $guid).children("span").html();
+                                            if (!IsNullOrEmpty(fileName)) {
+                                                fileSee($guid, $resolve)
+                                            }
+                                        }
+                                    }
+                                    if ($resolve != "") {
+                                        resolve($resolve);
+                                    }
+                                }
+                            }
+                        });
+                });
+            }
+
+            //智能判断文件大小
+            function getFileSize(v) {
+                var s = "";
+                if (v < 1024 * 1024)
+                    s = (v / 1024).toFixed(2) + "KB";
+                else if (v < 1024 * 1024 * 1024)
+                    s = (v / 1024 / 1024).toFixed(2) + "MB";
+                else
+                    s = (v / 1024 / 1024 / 1024).toFixed(2) + "GB";
+                return s;
+            }
+            
+            function IsNullOrEmpty(obj) {
+                if (obj === null || obj === undefined || obj === '' || obj === "" || obj === 'null' ) {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+
+            function contains(a, obj) {
+                for (var i = 0; i < a.length; i++) {
+                    if (a[i].name == obj.name && a[i].size == obj.size) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        });
+</script>
+</body>
+</html>
